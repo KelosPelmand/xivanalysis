@@ -41,6 +41,7 @@ export default class DWT extends Module {
 		'castTime',
 		'gauge',
 		'suggestions',
+		'timeline',
 	]
 	static title = t('smn.dwt.title')`Dreadwyrm Trance`
 	static displayOrder = DISPLAY_ORDER.DWT
@@ -122,7 +123,11 @@ export default class DWT extends Module {
 			badGcds += dwt.casts
 				.filter(cast => {
 					const action = getDataBy(ACTIONS, 'id', cast.ability.guid)
-					return action && action.onGcd && !CORRECT_GCDS.includes(action.id)
+					if (action && action.onGcd && !CORRECT_GCDS.includes(action.id)) {
+						this.timeline.addErrorToEvent(cast, 'This skill should not be cast during Dreadwyrm Trance')
+						return true
+					}
+					return false
 				})
 				.length
 		})
@@ -184,6 +189,7 @@ export default class DWT extends Module {
 		// ...don't miss deathflare k
 		// Don't flag if they died, the death suggestion is morbid enough.
 		if (dfHits === 0 && !this._dwt.died) {
+			this.timeline.addErrorToEventAt(this._dwt.start, 'No Deathflare was cast during this Dreadwyrm Trance')
 			this._missedDeathflares ++
 		}
 	}

@@ -21,6 +21,12 @@ const ISSUE_TYPENAMES = {
 	failedcombo: <Trans id="core.combos.issuetypenames.failed">Missed or Invulnerable</Trans>,
 }
 
+const ISSUE_TOOLTIPS = {
+	uncomboed: 'This skill was used uncomboed.',
+	combobreak: 'This skill broke the active combo.',
+	failedcombo: 'This skill failed to hit and broke the active combo.',
+}
+
 export class ComboEvent extends NormalisedEvent {
 	type = 'combo'
 	calculatedEvents: DamageEvent[] = []
@@ -261,6 +267,9 @@ export default class Combos extends Module {
 		const data = this.issues
 			.sort((a, b) => a.event.timestamp - b.event.timestamp)
 			.map(issue => {
+				// This is not related to the map, but is dumped here to avoid double iteration.
+				this.timeline.addErrorToEvent(issue.event, ISSUE_TOOLTIPS[issue.type])
+
 				const completeContext = [...(issue.context || []), issue.event]
 
 				const startEvent = _.first(completeContext)

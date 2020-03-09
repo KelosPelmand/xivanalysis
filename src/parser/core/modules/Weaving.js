@@ -31,6 +31,7 @@ export default class Weaving extends Module {
 		'invuln',
 		'speedmod',
 		'suggestions',
+		'timeline',
 	]
 
 	static title = t('core.weaving.title')`Weaving Issues`
@@ -164,7 +165,13 @@ export default class Weaving extends Module {
 		const speedmod = this.speedmod.get(this.parser.timestamp)
 		const gcdLength = this.gcd.getEstimate() * speedmod
 
-		return weave.gcdTimeDiff > gcdLength && weaveCount > maxWeaves
+		if (weave.gcdTimeDiff > gcdLength && weaveCount > maxWeaves) {
+			weave.weaves.filter(event => !this.invuln.isUntargetable('all', event.timestamp))
+				.slice(maxWeaves) //slice here means index in forEach will need to be adjusted to get weave number
+				.forEach((event, index) => this.timeline.addErrorToEvent(event, `This was weave ${index + maxWeaves + 1} for this GCD, but only ${maxWeaves} were allowed.`))
+			return true
+		}
+		return false
 	}
 
 	output() {

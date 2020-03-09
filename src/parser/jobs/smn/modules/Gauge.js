@@ -33,6 +33,7 @@ export default class Gauge extends Module {
 		'cooldowns',
 		'pets',
 		'suggestions',
+		'timeline',
 	]
 
 	// -----
@@ -84,6 +85,9 @@ export default class Gauge extends Module {
 		if (abilityId === ACTIONS.ENERGY_DRAIN.id || abilityId === ACTIONS.ENERGY_SIPHON.id) {
 			// Energy Drain/Siphon restores up to 2 flow stacks
 			// flow can never be > 2, so any remaining on cast is lost
+			if (this._aetherflow > 0) {
+				this.timeline.addErrorToEvent(event, this._aetherflow + ' aetherflow was left when cast.')
+			}
 			this._lostAetherflow += this._aetherflow
 			this._aetherflow = MAX_AETHERFLOW
 			this._rushingAetherflow = MIN_AETHERFLOW_SPEND_LENGTH >= fightTimeRemaining

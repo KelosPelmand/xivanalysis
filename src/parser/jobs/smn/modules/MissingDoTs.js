@@ -147,8 +147,9 @@ export default class MissingDoTs extends Module {
 		this._currentMissingDotWindow.casts.push(event)
 
 		// Add to the appropriate key
-		// Just tracking flat count for now. Expand to events if need info (for the timeline, yes pls)
 		this._badDotReqCasts[actionId].addBadCast(statusesMissing)
+		// Add message to the cast on the timeline
+		this.timeline.addErrorToEvent(event, 'This skill was cast with ' + statusesMissing + ' missing DoT(s).')
 	}
 
 	output() {

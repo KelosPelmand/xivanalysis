@@ -1,5 +1,7 @@
 import {t} from '@lingui/macro'
 import {Trans} from '@lingui/react'
+import {getDataBy} from 'data'
+import ACTIONS from 'data/ACTIONS'
 import React from 'react'
 import VisTimeline from 'react-visjs-timeline'
 import vis from 'vis-timeline/dist/vis-timeline-graph2d.min'
@@ -22,6 +24,10 @@ export default class Timeline extends Module {
 	// Data to be displayed on the timeline
 	_groups = []
 	_items = []
+	// tooltip messages provided before the matching item was added to the timeline
+	_errorQueue = []
+	_warningQueue = []
+	_messageQueue = []
 
 	// Ref for the timeline component so we can modify it post-render
 	_ref = null
@@ -43,6 +49,79 @@ export default class Timeline extends Module {
 
 	addItem(item) {
 		this._items.push(item)
+	}
+
+	addErrorToEvent(event, message) {
+		const action = getDataBy(ACTIONS, 'id', event.ability.guid)
+		const ct = (action && action.castTime) ? (action.castTime * 1000) : 0
+		this.addErrorToEventAt(event.timestamp, message, ct)
+	}
+	addErrorToEventAt(timestamp, message, castTime = 0) {
+		const item = this.findItemAt(timestamp, castTime)
+		if (item === undefined) {
+			this._errorQueue.push({timestamp, message, castTime})
+			return
+		}
+		item.hasError = true
+		const oldProps = item.content.props
+		item.content = <img src={oldProps.src}
+			alt={oldProps.alt}
+			title={(oldProps.title ?? '') + '\n! ' + message}
+			style={{border: '4px solid red'}} />
+	}
+
+	addWarningToEvent(event, message) {
+		const action = getDataBy(ACTIONS, 'id', event.ability.guid)
+		const ct = (action && action.castTime) ? (action.castTime * 1000) : 0
+		this.addWarningToEventAt(event.timestamp, message, ct)
+	}
+	addWarningToEventAt(timestamp, message, castTime = 0) {
+		const item = this.findItemAt(timestamp, castTime)
+		if (item === undefined) {
+			this._warningQueue.push({timestamp, message, castTime})
+			return
+		}
+		item.hasWarning = true
+		const oldProps = item.content.props
+		item.content = <img src={oldProps.src}
+			alt={oldProps.alt}
+			title={(oldProps.title ?? '') + '\n- ' + message}
+			style={(item.hasError) ? oldProps.style : {border: '4px solid yellow'}} />
+	}
+
+	addMessageToEvent(event, message) {
+		const action = getDataBy(ACTIONS, 'id', event.ability.guid)
+		const ct = (action && action.castTime) ? (action.castTime * 1000) : 0
+		this.addMessageToEventAt(event.timestamp, message, ct)
+	}
+	addMessageToEventAt(timestamp, message, castTime = 0) {
+		const item = this.findItemAt(timestamp, castTime)
+		if (item === undefined) {
+			this._messageQueue.push({timestamp, message, castTime})
+			return
+		}
+		const oldProps = item.content.props
+		item.content = <img src={oldProps.src}
+			alt={oldProps.alt}
+			title={(oldProps.title ?? '') + '\n  ' + message}
+			style={(item.hasError || item.hasWarning) ? oldProps.style : {border: '4px solid green'}} />
+	}
+
+	findItemAt(timestamp, castTime) {
+		timestamp -= this.parser.fight.start_time
+		let matcher = item => item.start === timestamp
+		if (castTime > 0) {
+			matcher = item => timestamp - castTime <= item.start && item.start <= timestamp
+		}
+
+		const ret = this._items.find(matcher)
+		if (ret !== undefined) { return ret }
+		return this._groups
+			.map(g => {
+				if (g.items === undefined) { return undefined }
+				return g.items.find(matcher)
+			})
+			.find(i => i !== undefined)
 	}
 
 	attachToGroup(id, group) {
@@ -72,6 +151,33 @@ export default class Timeline extends Module {
 	}
 
 	output() {
+		if (this._errorQueue.length > 0) {
+			// copy the array to avoid potential infinite loop if a message was
+			// added for a timestamp that never got added to the timeline
+			const errs = this._errorQueue.slice(0)
+			this._errorQueue = []
+			errs.forEach(e => this.addErrorToEventAt(e.timestamp, e.message, e.castTime))
+			if (this._errorQueue.length > 0) {
+				this.debug(`Could not find matching timeline items for ${this._errorQueue.length} errors.`)
+			}
+		}
+		if (this._warningQueue.length > 0) {
+			const warns = this._warningQueue.slice(0)
+			this._warningQueue = []
+			warns.forEach(w => this.addWarningToEventAt(w.timestamp, w.message, w.castTime))
+			if (this._warningQueue.length > 0) {
+				this.debug(`Could not find matching timeline items for ${this._warningQueue} warnings.`)
+			}
+		}
+		if (this._messageQueue.length > 0) {
+			const mess = this._messageQueue.slice(0)
+			this._messageQueue = []
+			mess.forEach(m => this.addMessageToEventAt(m.timestamp, m.message, m.castTime))
+			if (this._messageQueue.length > 0) {
+				this.debug(`Could not find matching timeline items for ${this._messageQueue} messages.`)
+			}
+		}
+
 		const options = {
 			// General styling
 			width: '100%',

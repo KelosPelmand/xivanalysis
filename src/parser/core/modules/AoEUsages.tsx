@@ -7,6 +7,7 @@ import {NormalisedDamageEvent} from 'parser/core/modules/NormalisedEvents'
 import Suggestions, {SEVERITY, TieredSuggestion} from 'parser/core/modules/Suggestions'
 import React from 'react'
 import {Table} from 'semantic-ui-react'
+import Timeline from './Timeline'
 
 export interface AoeAbility {
 	/**
@@ -46,6 +47,7 @@ export abstract class AoEUsages extends Module {
 	static title = t('core.aoeusages.title')`Incorrect AoE Ability Usage`
 
 	@dependency private suggestions!: Suggestions
+	@dependency private timeline!: Timeline
 
 	/**
 	 * Implementing modules MUST define the icon to be used for the suggestion.
@@ -94,6 +96,7 @@ export abstract class AoEUsages extends Module {
 
 		const minTargets = this.adjustMinTargets(event, tracked.minTargets)
 		if (event.hasSuccessfulHit && event.hitCount < minTargets) {
+			this.timeline.addErrorToEvent(event, 'This skill hit too few targets. (' + event.hits.length + ' hit, ' + minTargets + ' required)')
 			this.badUsages.set(event.ability.guid, (this.badUsages.get(event.ability.guid) || 0) + 1)
 		}
 	}

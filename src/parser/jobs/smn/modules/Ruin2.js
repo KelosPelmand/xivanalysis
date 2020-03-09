@@ -23,6 +23,7 @@ export default class Ruin2 extends Module {
 		'invuln',
 		'pets',
 		'suggestions',
+		'timeline',
 	]
 
 	// Events
@@ -71,12 +72,15 @@ export default class Ruin2 extends Module {
 			invulnTime === 0
 		) {
 			if (this._ogcdUsed) {
+				this.timeline.addWarningToEvent(this._lastGcd, 'This was used for weaving or Wyrmwave.')
 				// This was at least used for a weave, even though you should have enough other instants to not need R2s in general.
 				this._weaved.push(this._lastGcd)
 			} else if (this.movedSinceLastGcd()) {
+				this.timeline.addWarningToEvent(this._lastGcd, 'This was used for movement.')
 				// Separate count if they at least moved
 				this._moveOnly.push(this._lastGcd)
 			} else {
+				this.timeline.addErrorToEvent(this._lastGcd, 'This should have been a Ruin III cast instead.')
 				this._worthless.push(this._lastGcd)
 			}
 		}

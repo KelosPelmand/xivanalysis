@@ -75,6 +75,7 @@ export default class Demis extends Module {
 	static dependencies = [
 		'gauge',
 		'pets',
+		'timeline',
 	]
 
 	_current = null
@@ -156,6 +157,13 @@ export default class Demis extends Module {
 				const ghostIndex = cast.ghostChance || GHOST_CHANCE.NONE
 				obj[ghostIndex] = (obj[ghostIndex] || 0) + 1
 			})
+
+			const missedAnyChecked = Object.keys(checked).some(id => counts[Number(id)][GHOST_CHANCE.NONE] < checked[id].expected)
+			if (missedAnyChecked) {
+				this.timeline.addErrorToEventAt(s.timestamp, 'One or more casts or demi actions were missed.')
+			} else {
+				this.timeline.addMessageToEventAt(s.timestamp, 'All casts and demi actions completed successfully.')
+			}
 
 			const lastPetAction = s.casts.reduce((carry, cast, i) => this.parser.byPlayerPet(cast)? i : carry, null)
 			return {

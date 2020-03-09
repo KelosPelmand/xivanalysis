@@ -7,6 +7,7 @@ import {CastEvent} from 'fflogs'
 import Module, {dependency} from 'parser/core/Module'
 import Invulnerability from 'parser/core/modules/Invulnerability'
 import Suggestions, {SEVERITY, Suggestion, TieredSuggestion} from 'parser/core/modules/Suggestions'
+import Timeline from 'parser/core/modules/Timeline'
 import React from 'react'
 
 const SEVERITY_STACK_COUNT = {
@@ -42,6 +43,7 @@ export default class Ruin4 extends Module {
 
 	@dependency private suggestions!: Suggestions
 	@dependency private invuln!: Invulnerability
+	@dependency private timeline!: Timeline
 
 	private currentStackCount = 0
 	private bahamutMissingStackCount = 0
@@ -65,11 +67,15 @@ export default class Ruin4 extends Module {
 	}
 
 	private onSummonBahamut(event: CastEvent) {
-		if (this.currentStackCount < EXPECTED_BAHAMUT_SUMMON_STACKS) { this.bahamutMissingStackCount++ }
+		if (this.currentStackCount < EXPECTED_BAHAMUT_SUMMON_STACKS) {
+			this.bahamutMissingStackCount++
+			this.timeline.addErrorToEvent(event, 'Did not have 4 Ruin IV stacks available.')
+		}
 	}
 
 	private onPlayerEarthenArmor(event: CastEvent) {
 		this.earthenArmorCount++
+		this.timeline.addErrorToEvent(event, 'This egi skill does not generate a Ruin IV stack.')
 	}
 
 	private onPlayerOtherEgiAssault(event: CastEvent) {
